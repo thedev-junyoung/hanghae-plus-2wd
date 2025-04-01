@@ -87,7 +87,7 @@ sequenceDiagram
             OrderService->>+TransactionManager: 트랜잭션 커밋
             TransactionManager-->>-OrderService: 커밋 완료
 
-            Note over OrderService,ExternalPlatform: 📤 비동기 외부 전송 (데이터 분석 시스템 등)
+            Note over OrderService,ExternalPlatform: 비동기 외부 전송 (데이터 분석 시스템 등)
             OrderService->>+ExternalPlatform: 주문 정보 전송
             ExternalPlatform-->>-OrderService: 전송 접수 완료
 
