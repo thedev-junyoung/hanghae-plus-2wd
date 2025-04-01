@@ -11,18 +11,18 @@ erDiagram
     USER_COUPONS ||--o| ORDERS : applied_to
 
     USERS {
-        bigint id PK
-        varchar name
-        varchar email
+        bigint id PK  "사용자 ID"
+        varchar name  "사용자 이름"
+        varchar email "이메일 주소"
         timestamp created_at
         timestamp updated_at
     }
 
     BALANCES {
         bigint id PK
-        bigint user_id FK
-        decimal amount
-        bigint version
+        bigint user_id FK "유저 참조"
+        decimal amount    "보유 잔액"
+        bigint version    "낙관적 락용 버전"
         timestamp created_at
         timestamp updated_at
     }
@@ -31,8 +31,8 @@ erDiagram
         bigint id PK
         varchar name
         decimal price
-        int stock_quantity
-        bigint version
+        int stock_quantity "남은 재고"
+        bigint version     "낙관적 락"
         timestamp created_at
         timestamp updated_at
     }
@@ -40,7 +40,7 @@ erDiagram
     COUPONS {
         bigint id PK
         varchar code
-        varchar type
+        varchar type          "할인 타입: 비율/금액"
         int discount_rate
         int total_quantity
         int remaining_quantity
@@ -53,8 +53,8 @@ erDiagram
         bigint id PK
         bigint user_id FK
         bigint coupon_id FK
-        boolean is_used
-        timestamp expiry_date
+        boolean is_used        "사용 여부"
+        timestamp expiry_date  "만료일"
         bigint version
         timestamp created_at
         timestamp updated_at
@@ -67,7 +67,7 @@ erDiagram
         decimal total_amount
         decimal discount_amount
         decimal final_amount
-        varchar status
+        varchar status         "CREATED / PAID / ..."
         timestamp order_date
         timestamp created_at
         timestamp updated_at
@@ -103,4 +103,5 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+
 ```
