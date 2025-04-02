@@ -6,30 +6,32 @@ classDiagram
         -orderService: OrderService
         +createOrder(OrderRequestDto): OrderResponseDto
         +getOrderById(Long): OrderResponseDto
+        +cancelOrder(Long): OrderResponseDto %%주문 취소 API 추가
     }
 
     class ProductController {
         -productService: ProductService
         +getAllProducts(): List~ProductResponseDto~
         +getProductById(Long): ProductResponseDto
-        +getPopularProducts(): List~ProductResponseDto~
+        +getPopularProducts(): List~ProductResponseDto~ %%최근 3일간 인기 상품 조회 API
     }
 
     class UserController {
         -balanceService: BalanceService
-        +chargeBalance(Long, ChargeRequestDto): BalanceResponseDto
-        +getBalance(Long): BalanceResponseDto
+        +chargeBalance(Long, ChargeRequestDto): BalanceResponseDto %%잔액 충전 API
+        +getBalance(Long): BalanceResponseDto %%잔액 조회 API
     }
 
     class CouponController {
         -couponService: CouponService
         +issueCoupon(Long, String): CouponResponseDto
-        +getUserCoupons(Long): List~CouponResponseDto~
+        +issueLimitedCoupon(Long, String): CouponResponseDto %%선착순 쿠폰 발급 API
+        +getUserCoupons(Long): List~CouponResponseDto~ %%사용자 보유 쿠폰 목록 조회 API
     }
 
     class PaymentController {
         -paymentService: PaymentService
-        +requestPayment(Long): PaymentResponseDto
+        +requestPayment(Long): PaymentResponseDto %%결제 요청 API
         +confirmPayment(String): PaymentResponseDto
     }
 
@@ -38,8 +40,10 @@ classDiagram
         -orderRepository: OrderRepository
         -productService: ProductService
         -couponService: CouponService
-        +createOrder(OrderRequestDto): OrderResponseDto
+        -eventPublisher: EventPublisher %%이벤트 발행 추가
+        +createOrder(OrderRequestDto): OrderResponseDto %%주문 생성 (재고 확인 및 차감)
         +getOrderById(Long): OrderResponseDto
+        +cancelOrder(Long): OrderResponseDto %%주문 취소 메서드 추가
     }
 
     class PaymentService {
@@ -47,30 +51,59 @@ classDiagram
         -balanceService: BalanceService
         -orderRepository: OrderRepository
         -externalPaymentGateway: ExternalPaymentGateway
-        +requestPayment(Long): PaymentResponseDto
+        -distributedLock: DistributedLock %%분산 락 추가
+        +requestPayment(Long): PaymentResponseDto %%결제 요청 처리
         +confirmPayment(String): PaymentResponseDto
     }
 
     class ProductService {
         -productRepository: ProductRepository
+        -orderItemRepository: OrderItemRepository %%인기 상품 조회를 위한 주문 아이템 저장소 추가
+        -distributedLock: DistributedLock %%분산 락 추가
         +getAllProducts(): List~ProductResponseDto~
         +getProductById(Long): ProductResponseDto
-        +decreaseStock(Long, int): boolean
-        +getPopularProducts(): List~ProductResponseDto~
+        +decreaseStock(Long, int): boolean %%재고 차감 (동시성 제어)
+        +getPopularProducts(): List~ProductResponseDto~ %%최근 3일간 인기 상품 조회
     }
 
     class BalanceService {
         -balanceRepository: BalanceRepository
-        +chargeBalance(Long, BigDecimal): BalanceResponseDto
+        -distributedLock: DistributedLock %%분산 락 추가
+        +chargeBalance(Long, BigDecimal): BalanceResponseDto %%잔액 충전
         +getBalance(Long): BalanceResponseDto
-        +decreaseBalance(Long, BigDecimal): boolean
+        +decreaseBalance(Long, BigDecimal): boolean %%결제 시 잔액 차감 (동시성 제어)
     }
 
     class CouponService {
         -couponRepository: CouponRepository
+        -distributedLock: DistributedLock %%분산 락 추가
+        -redisTemplate: RedisTemplate %%선착순 쿠폰을 위한 Redis 추가
         +issueCoupon(Long, String): CouponResponseDto
         +getUserCoupons(Long): List~CouponResponseDto~
-        +validateAndUseCoupon(Long, Long): boolean
+        +validateAndUseCoupon(Long, Long): boolean %%쿠폰 유효성 검증 및 사용 처리
+        +issueLimitedCoupon(Long userId, String code): CouponResponseDto %%선착순 쿠폰 발급 (동시성 제어)
+    }
+
+%% 이벤트 처리 추가
+    class EventPublisher {
+        +publish(DomainEvent): void
+    }
+
+    class OrderCreatedEvent {
+        -orderId: OrderId
+        -orderDetails: OrderDetails
+    }
+
+    class PaymentCompletedEvent {
+        -paymentId: PaymentId
+        -orderId: OrderId
+    }
+
+%% 분산 락 추가
+    class DistributedLock {
+        +acquire(String, Duration): boolean
+        +release(String): void
+        +executeWithLock(String, Callable): Object
     }
 
 %% 도메인 모델 (엔티티)
@@ -86,6 +119,7 @@ classDiagram
         -orderDate: OrderDate
         +calculateTotalAmount(): Money
         +applyDiscount(Coupon): void
+        +cancel(): void %%주문 취소 메서드 추가
     }
 
     class Payment {
@@ -106,20 +140,20 @@ classDiagram
         -name: ProductName
         -price: Money
         -stock: Stock
-        -version: Version
-        +decreaseStock(Quantity): boolean
-        +increaseStock(Quantity): void
-        +isAvailable(Quantity): boolean
+        -version: Version %%낙관적 락을 위한 버전 필드
+        +decreaseStock(Quantity): boolean %%재고 차감 (동시성 제어)
+        +increaseStock(Quantity): void %%재고 증가 (주문 취소 시)
+        +isAvailable(Quantity): boolean %%주문 가능 여부 확인
     }
 
     class Balance {
         -id: BalanceId
         -userId: UserId
         -amount: Money
-        -version: Version
-        +charge(Money): void
-        +decrease(Money): boolean
-        +hasEnough(Money): boolean
+        -version: Version %%낙관적 락을 위한 버전 필드
+        +charge(Money): void %%잔액 충전
+        +decrease(Money): boolean %%잔액 차감 (동시성 제어)
+        +hasEnough(Money): boolean %%잔액 충분 여부 확인
     }
 
     class Coupon {
@@ -129,10 +163,10 @@ classDiagram
         -discountRate: DiscountRate
         -expiryDate: ExpiryDate
         -used: boolean
-        -version: Version
-        +isValid(): boolean
-        +markAsUsed(): void
-        +applyDiscount(Money): Money
+        -version: Version %%낙관적 락을 위한 버전 필드
+        +isValid(): boolean %%쿠폰 유효성 검증
+        +markAsUsed(): void %%쿠폰 사용 처리
+        +applyDiscount(Money): Money %%할인 적용
     }
 
     class OrderItem {
@@ -164,9 +198,9 @@ class Quantity {
 class Stock {
 <<Value Object>>
 -quantity: Quantity
-+decrease(Quantity): Stock
-+increase(Quantity): Stock
-+isAvailable(Quantity): boolean
++decrease(Quantity): Stock %%재고 차감
++increase(Quantity): Stock %%재고 증가
++isAvailable(Quantity): boolean %%재고 가용성 체크
 }
 
 %% 리포지토리
@@ -174,26 +208,36 @@ class OrderRepository {
 <<interface>>
 +save(Order): Order
 +findById(OrderId): Optional~Order~
++findByUserIdAndStatus(UserId, OrderStatus): List~Order~
+}
+
+class OrderItemRepository {
+<<interface>>
++save(OrderItem): OrderItem
++findByOrderId(OrderId): List~OrderItem~
++findTopSellingProductsAfter(LocalDateTime, int): List~TopSellingProductDto~ %%인기 상품 조회 메서드 추가
 }
 
 class PaymentRepository {
 <<interface>>
 +save(Payment): Payment
 +findById(PaymentId): Optional~Payment~
++findByOrderId(OrderId): Optional~Payment~
 }
 
 class ProductRepository {
 <<interface>>
 +findAll(): List~Product~
 +findById(ProductId): Optional~Product~
-+findByIdWithLock(ProductId): Optional~Product~
++findByIdWithLock(ProductId): Optional~Product~ %%비관적 락을 이용한 조회
 +save(Product): Product
++findTopSellingProducts(LocalDateTime, int): List~Product~ %%인기 상품 조회 메서드 추가
 }
 
 class BalanceRepository {
 <<interface>>
 +findByUserId(UserId): Optional~Balance~
-+findByUserIdWithLock(UserId): Optional~Balance~
++findByUserIdWithLock(UserId): Optional~Balance~ %%비관적 락을 이용한 조회
 +save(Balance): Balance
 }
 
@@ -202,11 +246,13 @@ class CouponRepository {
 +save(Coupon): Coupon
 +findById(CouponId): Optional~Coupon~
 +findByUserId(UserId): List~Coupon~
++findByUserIdAndCode(UserId, String): Optional~Coupon~
++findByIdWithLock(CouponId): Optional~Coupon~ %%비관적 락을 이용한 조회
 }
 
 %% 외부 시스템 연동
 class ExternalPlatformClient {
-+sendOrderData(OrderData): void
++sendOrderData(OrderData): void %%주문 데이터 외부 전송 (데이터 플랫폼)
 }
 
 class ExternalPaymentGateway {
@@ -249,17 +295,26 @@ PaymentController --> PaymentService
 OrderService --> OrderRepository
 OrderService --> ProductService
 OrderService --> CouponService
+OrderService --> EventPublisher
 
 PaymentService --> PaymentRepository
 PaymentService --> BalanceService
 PaymentService --> OrderRepository
 PaymentService --> ExternalPaymentGateway
+PaymentService --> DistributedLock
 
 ProductService --> ProductRepository
+ProductService --> OrderItemRepository
+ProductService --> DistributedLock
+
 BalanceService --> BalanceRepository
+BalanceService --> DistributedLock
+
 CouponService --> CouponRepository
+CouponService --> DistributedLock
 
 OrderRepository --> Order
+OrderItemRepository --> OrderItem
 PaymentRepository --> Payment
 ProductRepository --> Product
 BalanceRepository --> Balance
@@ -274,4 +329,7 @@ Product *-- Money
 Stock *-- Quantity
 Balance *-- Money
 Coupon *-- Money
-```
+
+EventPublisher --> OrderCreatedEvent
+EventPublisher --> PaymentCompletedEvent
+`````
