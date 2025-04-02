@@ -1,4 +1,4 @@
-## Step 3 - Mermaid 다이어그램
+## Step 3 - 프로세스 모델링 다이어그램
 
 ```mermaid
 flowchart TD
