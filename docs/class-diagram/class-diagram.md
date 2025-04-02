@@ -60,6 +60,10 @@ classDiagram
         +getUserCoupons(Long): List~CouponResponseDto~  %% 사용자 쿠폰 목록 조회
         +validateAndUseCoupon(Long, Long): boolean  %% 쿠폰 유효성 검증 및 사용 처리
     }
+    
+    class OrderOutboxProcessor {
+        +processPendingEvents(): void
+    }
 
 %% 도메인 모델 (엔티티)
     class Order {
@@ -120,6 +124,19 @@ classDiagram
         +calculateAmount(): Money  %% 주문 상품 금액 계산
     }
 
+    class OrderOutbox {
+        -id: Long
+        -orderId: Long
+        -eventType: String
+        -eventPayload: String
+        -status: String
+        -retryCount: int
+        -lastAttemptedAt: LocalDateTime
+        -createdAt: LocalDateTime
+        -updatedAt: LocalDateTime
+    }
+    
+
 %% 값 객체 (Value Objects)
     class Money {
 <<Value Object>>
@@ -175,6 +192,18 @@ class CouponRepository {
 +findByUserId(UserId): List~Coupon~  %% 사용자별 쿠폰 조회
 }
 
+
+class OrderOutboxRepository {
+<<interface>>
++save(OrderOutbox): OrderOutbox
++findPendingEvents(): List~OrderOutbox~
++markAsSent(OrderOutbox): void
++incrementRetry(OrderOutbox): void
+}
+
+
+
+
 %% 외부 시스템 연동
 class ExternalPlatformClient {
 +sendOrderData(OrderData): void  %% 주문 데이터 외부 플랫폼 전송
@@ -216,6 +245,13 @@ OrderRepository --> Order
 ProductRepository --> Product
 BalanceRepository --> Balance
 CouponRepository --> Coupon
+
+
+OrderService --> OrderOutboxRepository : << 저장 >>
+OrderOutboxProcessor --> OrderOutboxRepository : << 조회, 상태 변경 >>
+OrderOutboxProcessor --> ExternalPlatformClient : << 전송 >>
+
+
 
 Order *-- "many" OrderItem
 

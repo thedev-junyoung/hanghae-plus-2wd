@@ -9,6 +9,7 @@ erDiagram
     ORDERS ||--o{ ORDER_ITEMS : contains
     COUPONS ||--o{ USER_COUPONS : issued_as
     USER_COUPONS ||--o| ORDERS : applied_to
+    ORDERS ||--o{ ORDER_OUTBOX : emits
 
     USERS {
         bigint id PK  "사용자 ID"
@@ -93,6 +94,18 @@ erDiagram
         timestamp updated_at
     }
 
+    ORDER_OUTBOX {
+        bigint id PK
+        bigint order_id FK
+        varchar event_type
+        text event_payload
+        varchar status       "PENDING / SENT / FAILED"
+        int retry_count
+        timestamp last_attempted_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
     FAILED_EVENTS {
         bigint id PK
         varchar event_type
@@ -103,5 +116,4 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-
 ```
