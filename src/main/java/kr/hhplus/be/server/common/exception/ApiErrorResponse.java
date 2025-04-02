@@ -11,13 +11,13 @@ import java.time.LocalDateTime;
 @Schema(description = "API 에러 응답")
 public class ApiErrorResponse {
 
-    @Schema(description = "응답 상태", example = "error", required = true)
+    @Schema(description = "응답 상태", example = "error")
     private final String status = "error";
 
-    @Schema(description = "에러 코드", example = "PRODUCT_NOT_FOUND", required = true)
+    @Schema(description = "에러 코드", example = "PRODUCT_NOT_FOUND")
     private final String code;
 
-    @Schema(description = "에러 메시지", example = "상품을 찾을 수 없습니다.", required = true)
+    @Schema(description = "에러 메시지", example = "상품을 찾을 수 없습니다.")
     private final String message;
 
     @Schema(description = "에러 발생 시간", example = "2025-04-02T10:15:30.123")

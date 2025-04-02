@@ -9,7 +9,7 @@ import lombok.Getter;
 @Schema(description = "API 응답")
 public class CustomApiResponse<T> {
 
-    @Schema(description = "응답 상태", example = "success", required = true, allowableValues = {"success", "error"})
+    @Schema(description = "응답 상태", example = "success", allowableValues = {"success", "error"})
     private final String status;
 
     @Schema(description = "응답 데이터 (성공 시)")

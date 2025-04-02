@@ -16,8 +16,6 @@ import kr.hhplus.be.server.domain.coupon.dto.response.CouponResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Tag(name = "Coupon", description = "쿠폰 관리 API")
 @RequestMapping("/api/v1/coupons")
