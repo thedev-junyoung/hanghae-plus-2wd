@@ -10,6 +10,7 @@ erDiagram
     COUPONS ||--o{ USER_COUPONS : issued_as
     USER_COUPONS ||--o| ORDERS : applied_to
     ORDERS ||--o{ ORDER_OUTBOX : emits
+    ORDERS ||--|| PAYMENTS : paid_by
 
     USERS {
         bigint id PK  "사용자 ID"
@@ -68,7 +69,7 @@ erDiagram
         decimal total_amount
         decimal discount_amount
         decimal final_amount
-        varchar status         "CREATED / PAID / ..."
+        varchar status         "CREATED / CONFIRMED / CANCELLED"
         timestamp order_date
         timestamp created_at
         timestamp updated_at
@@ -106,6 +107,19 @@ erDiagram
         timestamp updated_at
     }
 
+    PAYMENTS {
+        bigint id PK
+        bigint order_id FK
+        decimal amount
+        varchar status         "INITIATED / SUCCESS / FAILURE"
+        varchar pg_transaction_id
+        varchar method         "결제 수단 (e.g., BALANCE / CARD)"
+        int retry_count
+        text fail_reason
+        timestamp created_at
+        timestamp updated_at
+    }
+
     FAILED_EVENTS {
         bigint id PK
         varchar event_type
@@ -117,3 +131,4 @@ erDiagram
         timestamp updated_at
     }
 ```
+

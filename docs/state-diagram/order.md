@@ -2,18 +2,10 @@
 stateDiagram-v2
     [*] --> CREATED: 주문 생성
 
-    CREATED --> PAYMENT_PENDING: 결제 시도
+    CREATED --> CONFIRMED: 결제 성공
     CREATED --> CANCELLED: 사용자 취소
 
-    PAYMENT_PENDING --> PAID: 결제 성공
-    PAYMENT_PENDING --> PAYMENT_FAILED: 잔액 부족/결제 실패
-    PAYMENT_PENDING --> CANCELLED: 결제 타임아웃
-
-    PAYMENT_FAILED --> PAYMENT_PENDING: 결제 재시도
-    PAYMENT_FAILED --> CANCELLED: 최대 시도 초과
-
-%% 트랜잭셔널 아웃박스 반영
-    PAID --> EVENT_PENDING: 이벤트 저장됨 (Outbox)
+    CONFIRMED --> EVENT_PENDING: 이벤트 저장됨 (Outbox)
     EVENT_PENDING --> EVENT_SENT: 외부 전송 성공
     EVENT_PENDING --> EVENT_FAILED: 전송 실패
     EVENT_FAILED --> EVENT_PENDING: 재시도
