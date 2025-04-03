@@ -1,4 +1,4 @@
-## Step 3 - 프로세스 모델링 다이어그램
+## Step 3 - 프로세스 모델링 다이어그램 (쿠폰 발급 포함)
 
 ```mermaid
 flowchart TD
@@ -15,11 +15,29 @@ flowchart TD
 
 %% 액터 및 애그리게이트
     A1[사용자]:::actor
+    A2[관리자/판매자]:::actor
     AG1[Order 애그리게이트]:::aggregate
     AG2[Product 애그리게이트]:::aggregate
     AG3[Coupon 애그리게이트]:::aggregate
     AG4[Balance 애그리게이트]:::aggregate
-    EXT[외부 데이터 플랫폼]:::external
+    OUTBOX[(COUPON_EVENTS 테이블)]:::external
+    EXT_LOGIC[(쿠폰 알림 서비스 또는 비즈니스 트리거 처리)]:::external
+
+%% --- 쿠폰 발급 흐름 수정 ---
+    A2 --> C0[쿠폰 발급 요청]:::command
+    C0 --> AG3
+    AG3 --> E0_1[쿠폰 발급 요청이 접수되었다]:::event
+    E0_1 --> P0[발급자 권한 검증 정책]:::policy
+    P0 --> C0_2[권한 검증 요청]:::command
+    C0_2 --> AG3
+    AG3 --> E0_2[쿠폰 발급자가 유효하다]:::event
+    E0_2 --> C0_3[쿠폰 생성 요청]:::command
+    C0_3 --> AG3
+    AG3 --> E0_3[쿠폰이 생성되었다]:::event
+    E0_3 --> C0_4[쿠폰 발급 이벤트 저장]:::command
+    C0_4 --> OUTBOX
+    OUTBOX --> C0_5[쿠폰 이벤트 처리 트리거]:::command
+    C0_5 --> EXT_LOGIC
 
 %% 주문 요청 및 검증
     A1 --> C1[주문 생성 요청]:::command
@@ -108,15 +126,14 @@ flowchart TD
     AG1 --> E11[주문이 생성되었다]:::event
 
 %% 트랜잭셔널 아웃박스 패턴
-    E11 --> P7[외부 전송 정책]:::policy
+    E11 --> P7[주문 이벤트 저장 정책]:::policy
     P7 --> C10[이벤트 저장 요청]:::command
     C10 --> DB[(ORDER_EVENTS 테이블)]
     DB --> P8[이벤트 처리 정책]:::policy
-    P8 --> C11[외부 전송 요청]:::command
-    C11 --> EXT
-    EXT --> E12[주문 정보가 외부 플랫폼으로 전송되었다]:::event
+    P8 --> C11[주문 이벤트 후처리 트리거]:::command
+    C11 --> EXT_LOGIC
 
 %% 주문 프로세스 뷰
-    E12 --> V1[주문 상태 뷰]:::view
+    C11 --> V1[주문 상태 뷰]:::view
     V1 --> A1
 ```
