@@ -8,10 +8,12 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductListResponse;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/products")
 public class ProductController implements ProductAPI {
 
     private final ProductService productService;
