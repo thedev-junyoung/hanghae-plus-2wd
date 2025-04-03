@@ -35,7 +35,7 @@ public interface CouponAPI {
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    @PostMapping("/create")
+    @PostMapping
     ResponseEntity<CustomApiResponse<CouponResponse>> createCoupon(
             @Parameter(description = "쿠폰 생성 요청", required = true)
             @Valid @RequestBody CreateCouponRequest request
@@ -76,4 +76,24 @@ public interface CouponAPI {
             @Parameter(description = "쿠폰 상태 필터 (ALL, UNUSED, USED, EXPIRED)", example = "ALL")
             @RequestParam(defaultValue = "ALL") String status
     );
+
+    @PostMapping("/limited")
+    @Operation(summary = "선착순 쿠폰 발급", description = "선착순으로 할인 쿠폰을 발급받습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = CouponResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "사용자 또는 쿠폰 없음",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "동시성 충돌",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    ResponseEntity<CustomApiResponse<CouponResponse>> issueLimitedCoupon(
+            @Parameter(description = "선착순 쿠폰 발급 요청", required = true)
+            @Valid @RequestBody IssueCouponRequest request
+    );
+
 }

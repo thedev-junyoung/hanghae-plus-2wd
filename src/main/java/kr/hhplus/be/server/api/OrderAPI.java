@@ -96,7 +96,7 @@ public interface OrderAPI {
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    @PostMapping("/{orderId}/cancel")
+    @DeleteMapping("/{orderId}")
     ResponseEntity<CustomApiResponse<OrderResponse>> cancelOrder(
             @Parameter(description = "주문 ID", example = "1001", required = true)
             @PathVariable Long orderId,

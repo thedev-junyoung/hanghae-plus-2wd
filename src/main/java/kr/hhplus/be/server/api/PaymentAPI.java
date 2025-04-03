@@ -34,7 +34,7 @@ public interface PaymentAPI {
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    @PostMapping("/process")
+    @PostMapping
     ResponseEntity<CustomApiResponse<PaymentResponse>> processPayment(
             @Parameter(description = "결제 처리 요청", required = true)
             @Valid @RequestBody ProcessPaymentRequest request
