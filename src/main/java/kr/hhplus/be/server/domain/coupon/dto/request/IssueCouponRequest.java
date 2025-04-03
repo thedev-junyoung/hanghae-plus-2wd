@@ -19,6 +19,10 @@ public class IssueCouponRequest {
     @Schema(description = "사용자 ID", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long userId;
 
+    @NotNull(message = "쿠폰 ID는 필수입니다.")
+    @Schema(description = "쿠폰 ID", example = "5001", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String couponCode;
+
     @NotBlank(message = "쿠폰 유형은 필수입니다.")
     @Schema(description = "쿠폰 유형 (예: PERCENTAGE_10, FIXED_5000)", example = "PERCENTAGE_10", requiredMode = Schema.RequiredMode.REQUIRED)
     private String couponType;

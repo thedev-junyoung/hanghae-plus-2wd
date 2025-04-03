@@ -16,7 +16,6 @@ import kr.hhplus.be.server.domain.order.dto.response.OrderResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
 @Tag(name = "Order", description = "주문 관리 API")
 @RequestMapping("/api/v1/orders")
 public interface OrderAPI {
@@ -80,5 +79,28 @@ public interface OrderAPI {
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "주문 상태 필터 (ALL, CREATED, PAID, CANCELLED, DELIVERED 등)", example = "ALL")
             @RequestParam(defaultValue = "ALL") String status
+    );
+
+    @Operation(summary = "주문 취소", description = "생성된 주문을 취소합니다. 결제 전 상태에서만 가능합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "주문 없음",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "처리 불가능한 상태",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/{orderId}/cancel")
+    ResponseEntity<CustomApiResponse<OrderResponse>> cancelOrder(
+            @Parameter(description = "주문 ID", example = "1001", required = true)
+            @PathVariable Long orderId,
+            @Parameter(description = "사용자 ID", example = "12345", required = true)
+            @RequestParam Long userId
     );
 }

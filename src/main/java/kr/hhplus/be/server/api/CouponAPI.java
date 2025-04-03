@@ -6,10 +6,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.common.exception.ApiErrorResponse;
 import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
+import kr.hhplus.be.server.domain.coupon.dto.request.CreateCouponRequest;
 import kr.hhplus.be.server.domain.coupon.dto.request.IssueCouponRequest;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponListResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponResponse;
@@ -20,6 +22,24 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Coupon", description = "쿠폰 관리 API")
 @RequestMapping("/api/v1/coupons")
 public interface CouponAPI {
+
+    @Operation(summary = "쿠폰 생성", description = "관리자 또는 판매자가 쿠폰을 생성합니다.",
+            security = @SecurityRequirement(name = "JWT", scopes = {"ADMIN", "SELLER"}))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "성공",
+                    content = @Content(schema = @Schema(implementation = CouponResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "권한 없음",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/create")
+    ResponseEntity<CustomApiResponse<CouponResponse>> createCoupon(
+            @Parameter(description = "쿠폰 생성 요청", required = true)
+            @Valid @RequestBody CreateCouponRequest request
+    );
 
     @Operation(summary = "쿠폰 발급", description = "선착순으로 할인 쿠폰을 발급받습니다.")
     @ApiResponses(value = {
@@ -56,8 +76,4 @@ public interface CouponAPI {
             @Parameter(description = "쿠폰 상태 필터 (ALL, UNUSED, USED, EXPIRED)", example = "ALL")
             @RequestParam(defaultValue = "ALL") String status
     );
-
-    // Swagger 문서화를 위한 응답 스키마 내부 클래스
-
-
 }

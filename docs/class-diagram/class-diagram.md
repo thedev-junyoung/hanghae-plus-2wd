@@ -219,6 +219,7 @@ class EventRelayScheduler {
         -issuerId: UserId %%  발급자 ID (SELLER / ADMIN)
         -userId: UserId
         -type: CouponType
+        -code: String
         -discountRate: DiscountRate
         -expiryDate: ExpiryDate
         -used: boolean
