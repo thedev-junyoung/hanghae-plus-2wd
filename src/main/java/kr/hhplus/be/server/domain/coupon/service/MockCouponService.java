@@ -6,7 +6,6 @@ import kr.hhplus.be.server.domain.coupon.dto.request.CreateCouponRequest;
 import kr.hhplus.be.server.domain.coupon.dto.request.IssueCouponRequest;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponListResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponResponse;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
