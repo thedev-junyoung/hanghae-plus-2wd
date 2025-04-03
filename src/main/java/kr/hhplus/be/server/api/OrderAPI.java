@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.common.exception.ApiErrorResponse;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import kr.hhplus.be.server.domain.order.dto.request.CreateOrderRequest;
 import kr.hhplus.be.server.domain.order.dto.response.OrderListResponse;
 import kr.hhplus.be.server.domain.order.dto.response.OrderResponse;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/orders")
 public interface OrderAPI {
 
-    @Operation(summary = "주문 생성 및 결제", description = "주문을 생성하고 결제를 수행합니다.")
+    @Operation(summary = "주문 생성", description = "상품 주문을 생성합니다. 결제는 별도로 처리됩니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -31,7 +31,7 @@ public interface OrderAPI {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "동시성 충돌",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "처리 불가능(재고 부족/잔액 부족 등)",
+            @ApiResponse(responseCode = "422", description = "처리 불가능(재고 부족 등)",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))

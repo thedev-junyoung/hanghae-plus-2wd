@@ -78,12 +78,24 @@ classDiagram
         -couponRepository: CouponRepository
         -distributedLock: DistributedLock %%분산 락 추가
         -redisTemplate: RedisTemplate %%선착순 쿠폰을 위한 Redis 추가
+        +createCoupon(CreateCouponCommand): CouponResponseDto %% 발급 주체 명확히
         +issueCoupon(Long, String): CouponResponseDto
         +getUserCoupons(Long): List~CouponResponseDto~
         +validateAndUseCoupon(Long, Long): boolean %%쿠폰 유효성 검증 및 사용 처리
         +issueLimitedCoupon(Long userId, String code): CouponResponseDto %%선착순 쿠폰 발급 (동시성 제어)
     }
-
+    class CreateCouponCommand {
+    <<Value Object>>
+    -issuerId: UserId
+    -type: CouponType
+    -discountRate: DiscountRate
+    -totalQuantity: int
+    -validFrom: LocalDateTime
+    -validUntil: LocalDateTime
+    -targetUserId: UserId
+    -code: String
+    }
+    
 %% 이벤트 처리 추가
     class EventPublisher {
         +publish(DomainEvent): void
@@ -106,7 +118,53 @@ classDiagram
         +executeWithLock(String, Callable): Object
     }
 
+%% 아웃박스 패턴 연동 구조 추가
+
+class OutboxEvent {
+-id: UUID
+-aggregateType: String
+-aggregateId: String
+-eventType: String
+-payload: String
+-status: OutboxStatus
+-createdAt: LocalDateTime
+}
+
+class OutboxRepository {
+<<interface>>
++save(OutboxEvent): void
++findPending(): List~OutboxEvent~
++markAsSent(UUID): void
+}
+
+class OutboxService {
+-outboxRepository: OutboxRepository
++publish(DomainEvent): void %% 이벤트 → OutboxEvent 변환 후 저장
+}
+
+class EventRelayScheduler {
+-outboxRepository: OutboxRepository
+-externalPlatformClient: ExternalPlatformClient
++run(): void %% 주기적으로 OutboxEvent 처리
+}
+
+
+
+
+
 %% 도메인 모델 (엔티티)
+
+    class User {
+        -id: UserId
+        -name: String
+        -email: String
+        -role: UserRole
+        -businessNumber: String
+        -adminCode: String
+        -description: String
+    }
+
+
     class Order {
         -id: OrderId
         -userId: UserId
@@ -158,15 +216,17 @@ classDiagram
 
     class Coupon {
         -id: CouponId
+        -issuerId: UserId %%  발급자 ID (SELLER / ADMIN)
         -userId: UserId
         -type: CouponType
         -discountRate: DiscountRate
         -expiryDate: ExpiryDate
         -used: boolean
-        -version: Version %%낙관적 락을 위한 버전 필드
-        +isValid(): boolean %%쿠폰 유효성 검증
-        +markAsUsed(): void %%쿠폰 사용 처리
-        +applyDiscount(Money): Money %%할인 적용
+        -version: Version
+        +isValid(): boolean
+        +markAsUsed(): void
+        +applyDiscount(Money): Money
+        +isIssuerValid(User): boolean %%  발급 권한 확인
     }
 
     class OrderItem {
@@ -178,7 +238,41 @@ classDiagram
         -price: Money
         +calculateAmount(): Money
     }
+class OrderEvents {
+<<Entity>>
+-id: UUID
+-aggregateType: String = "Order"
+-aggregateId: String
+-eventType: String
+-payload: String
+-status: OutboxStatus
+-createdAt: LocalDateTime
+}
 
+class CouponEvents {
+<<Entity>>
+-id: UUID
+-aggregateType: String = "Coupon"
+-aggregateId: String
+-eventType: String
+-payload: String
+-status: OutboxStatus
+-createdAt: LocalDateTime
+}
+
+class OrderEventsRepository {
+<<interface>>
++save(OrderEvents): void
++findPending(): List~OrderEvents~
++markAsSent(UUID): void
+}
+
+class CouponEventsRepository {
+<<interface>>
++save(CouponEvents): void
++findPending(): List~CouponEvents~
++markAsSent(UUID): void
+}
 %% 값 객체
     class Money {
 <<Value Object>>
@@ -312,6 +406,9 @@ BalanceService --> DistributedLock
 
 CouponService --> CouponRepository
 CouponService --> DistributedLock
+CouponService --> RedisTemplate
+CouponService --> OutboxService  
+
 
 OrderRepository --> Order
 OrderItemRepository --> OrderItem
@@ -319,6 +416,15 @@ PaymentRepository --> Payment
 ProductRepository --> Product
 BalanceRepository --> Balance
 CouponRepository --> Coupon
+
+OutboxService --> OutboxRepository
+EventRelayScheduler --> OutboxRepository
+EventRelayScheduler --> ExternalPlatformClient
+OutboxService --> DomainEvent
+OutboxService --> OrderEventsRepository
+OutboxService --> CouponEventsRepository
+EventRelayScheduler --> OrderEventsRepository
+EventRelayScheduler --> CouponEventsRepository
 
 Order *-- "many" OrderItem
 Order *-- Money

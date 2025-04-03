@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.common.exception.ApiErrorResponse;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import kr.hhplus.be.server.domain.product.dto.response.PopularProductResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductDetailResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductListResponse;
@@ -55,7 +55,7 @@ public interface ProductAPI {
             @PathVariable Long productId
     );
 
-    @Operation(summary = "인기 상품 조회", description = "최근 3일간 가장 많이 팔린 상위 5개 상품을 조회합니다.")
+    @Operation(summary = "인기 판매 상품 조회", description = "최근 3일간 판매량이 높은 상위 5개 스니커즈 상품 정보를 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "성공",
                     content = @Content(schema = @Schema(implementation = PopularProductResponse.class))),

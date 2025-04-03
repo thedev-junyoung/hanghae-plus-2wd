@@ -12,15 +12,19 @@ erDiagram
     ORDERS ||--o{ ORDER_EVENTS : emits
     ORDERS ||--|| PAYMENTS : paid_by
     ORDERS }|--|| ORDER_STATUS : has
-
+    
     USERS {
         bigint id PK "사용자 ID"
         varchar name "사용자 이름"
         varchar email "이메일 주소"
-        timestamp created_at
-        timestamp updated_at
+        varchar role "역할: USER, SELLER, ADMIN"
+        varchar phone_number "연락처"
+        varchar business_number "사업자 등록번호 (SELLER 전용)"
+        varchar admin_code "관리자 식별 코드 (ADMIN 전용)"
+        text description "소개글 (SELLER/ADMIN 전용)"
+        timestamp created_at "생성일"
+        timestamp updated_at "수정일"
     }
-
     BALANCES {
         bigint id PK
         bigint user_id FK "유저 참조"
@@ -43,12 +47,13 @@ erDiagram
     COUPONS {
         bigint id PK
         varchar code "쿠폰 코드"
-        varchar type "할인 타입: PERCENTAGE/FIXED_AMOUNT"
-        int discount_rate "할인율 또는 할인금액"
-        int total_quantity "총 발행 수량"
-        int remaining_quantity "남은 수량 - 선착순 쿠폰 발급용"
+        varchar type "할인 타입 (PERCENTAGE, FIXED)"
+        int discount_rate "할인율 / 정액 금액"
+        int total_quantity "전체 발급 가능 수량"
+        int remaining_quantity "남은 수량"
         timestamp valid_from "유효 시작일"
         timestamp valid_until "유효 종료일"
+        bigint created_by FK "쿠폰 발행자 (관리자/판매자)"
         timestamp created_at
     }
 

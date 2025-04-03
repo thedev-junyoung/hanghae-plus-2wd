@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import kr.hhplus.be.server.api.CouponAPI;
 import kr.hhplus.be.server.common.exception.BusinessException;
 import kr.hhplus.be.server.common.exception.ErrorCode;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import kr.hhplus.be.server.domain.coupon.dto.request.IssueCouponRequest;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponListResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponResponse;

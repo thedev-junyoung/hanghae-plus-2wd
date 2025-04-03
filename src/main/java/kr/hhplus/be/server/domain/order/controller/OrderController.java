@@ -2,7 +2,7 @@ package kr.hhplus.be.server.domain.order.controller;
 
 import kr.hhplus.be.server.api.OrderAPI;
 import kr.hhplus.be.server.common.dto.Pagination;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import kr.hhplus.be.server.domain.order.dto.request.CreateOrderRequest;
 import kr.hhplus.be.server.domain.order.dto.response.*;
 import lombok.RequiredArgsConstructor;
@@ -26,18 +26,32 @@ public class OrderController implements OrderAPI {
 
         List<OrderItemDTO> items = mapToItemDtos(request.getItems());
         BigDecimal totalAmount = calculateTotalAmount(items);
-        BigDecimal discountAmount = BigDecimal.valueOf(500);
+
+        // 쿠폰 할인 적용 (있는 경우)
+        AppliedCoupon appliedCoupon = buildMockCouponIfExists(request.getUserCouponId());
+        BigDecimal discountAmount = BigDecimal.ZERO;
+
+        if (appliedCoupon != null) {
+            // 쿠폰 타입에 따라 할인액 계산
+            if ("PERCENTAGE_10".equals(appliedCoupon.getCouponType())) {
+                discountAmount = totalAmount.multiply(BigDecimal.valueOf(0.1));
+            } else if ("FIXED_AMOUNT_5000".equals(appliedCoupon.getCouponType())) {
+                discountAmount = BigDecimal.valueOf(5000);
+            }
+        }
+
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
 
         OrderResponse response = OrderResponse.builder()
                 .orderId(newOrderId)
                 .userId(request.getUserId())
-                .status("PAID")
+                .status("CREATED") // 주문만 생성되고 결제는 아직 안 됨
                 .items(items)
                 .totalAmount(totalAmount)
                 .discountAmount(discountAmount)
                 .finalAmount(finalAmount)
-                .appliedCoupon(buildMockCouponIfExists(request.getUserCouponId()))
+                .appliedCoupon(appliedCoupon)
+                .orderDate(LocalDateTime.now())
                 .build();
 
         return ResponseEntity.ok(CustomApiResponse.success(response));
@@ -58,12 +72,13 @@ public class OrderController implements OrderAPI {
         OrderResponse response = OrderResponse.builder()
                 .orderId(orderId)
                 .userId(123L)
-                .status("PAID")
+                .status("CREATED") // 상태에 따라 다르게 표시 (CREATED, PAID, CANCELLED, DELIVERED)
                 .items(items)
                 .totalAmount(BigDecimal.valueOf(3000))
                 .discountAmount(BigDecimal.valueOf(1000))
                 .finalAmount(BigDecimal.valueOf(2000))
                 .appliedCoupon(buildMockCouponIfExists(5001L))
+                .orderDate(LocalDateTime.now().minusDays(1))
                 .build();
 
         return ResponseEntity.ok(CustomApiResponse.success(response));
@@ -74,7 +89,7 @@ public class OrderController implements OrderAPI {
         OrderSummaryDTO summary = OrderSummaryDTO.builder()
                 .orderId(1001L)
                 .orderDate(LocalDateTime.now().minusDays(1))
-                .status("PAID")
+                .status("CREATED") // 상태에 따라 다르게 표시
                 .totalAmount(BigDecimal.valueOf(5000))
                 .finalAmount(BigDecimal.valueOf(4500))
                 .itemCount(2)
@@ -128,4 +143,3 @@ public class OrderController implements OrderAPI {
                 .build();
     }
 }
-

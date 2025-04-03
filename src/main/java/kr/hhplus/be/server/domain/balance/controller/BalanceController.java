@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import kr.hhplus.be.server.api.BalanceAPI;
 import kr.hhplus.be.server.common.exception.BusinessException;
 import kr.hhplus.be.server.common.exception.ErrorCode;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import kr.hhplus.be.server.domain.balance.dto.request.ChargeBalanceRequest;
 import kr.hhplus.be.server.domain.balance.dto.response.BalanceResponse;
 import lombok.RequiredArgsConstructor;

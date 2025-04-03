@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.common.exception;
 
 import jakarta.persistence.EntityNotFoundException;
-import kr.hhplus.be.server.common.response.CustomApiResponse;
+import kr.hhplus.be.server.common.dto.response.CustomApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -31,7 +31,6 @@ public class GlobalExceptionHandler {
         log.error("handleMethodArgumentNotValidException", e);
         final List<String> errorDetails = createFieldErrorDetails(e.getBindingResult());
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.INVALID_INPUT_VALUE.getCode(),
                 ErrorCode.INVALID_INPUT_VALUE.getMessage()
         );
         return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus()).body(response);
@@ -45,7 +44,6 @@ public class GlobalExceptionHandler {
         log.error("handleBindException", e);
         final List<String> errorDetails = createFieldErrorDetails(e.getBindingResult());
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.INVALID_INPUT_VALUE.getCode(),
                 ErrorCode.INVALID_INPUT_VALUE.getMessage()
         );
         return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus()).body(response);
@@ -58,7 +56,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.error("handleHttpRequestMethodNotSupportedException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.METHOD_NOT_ALLOWED.getCode(),
                 ErrorCode.METHOD_NOT_ALLOWED.getMessage()
         );
         return ResponseEntity.status(ErrorCode.METHOD_NOT_ALLOWED.getStatus()).body(response);
@@ -71,7 +68,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         log.error("handleMethodArgumentTypeMismatchException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.INVALID_TYPE_VALUE.getCode(),
                 ErrorCode.INVALID_TYPE_VALUE.getMessage()
         );
         return ResponseEntity.status(ErrorCode.INVALID_TYPE_VALUE.getStatus()).body(response);
@@ -84,7 +80,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleBusinessException(BusinessException e) {
         log.error("handleBusinessException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                e.getErrorCode().getCode(),
                 e.getErrorCode().getMessage()
         );
         return ResponseEntity.status(e.getErrorCode().getStatus()).body(response);
@@ -97,7 +92,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleEntityNotFoundException(EntityNotFoundException e) {
         log.error("handleEntityNotFoundException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.ENTITY_NOT_FOUND.getCode(),
                 ErrorCode.ENTITY_NOT_FOUND.getMessage()
         );
         return ResponseEntity.status(ErrorCode.ENTITY_NOT_FOUND.getStatus()).body(response);
@@ -110,7 +104,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleOptimisticLockingFailureException(OptimisticLockingFailureException e) {
         log.error("handleOptimisticLockingFailureException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.CONCURRENT_REQUEST.getCode(),
                 ErrorCode.CONCURRENT_REQUEST.getMessage()
         );
         return ResponseEntity.status(ErrorCode.CONCURRENT_REQUEST.getStatus()).body(response);
@@ -123,7 +116,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         log.error("handleDataIntegrityViolationException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.INVALID_INPUT_VALUE.getCode(),
                 ErrorCode.INVALID_INPUT_VALUE.getMessage()
         );
         return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus()).body(response);
@@ -136,7 +128,6 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<CustomApiResponse<Object>> handleException(Exception e) {
         log.error("handleException", e);
         final CustomApiResponse<Object> response = CustomApiResponse.error(
-                ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
                 ErrorCode.INTERNAL_SERVER_ERROR.getMessage()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
