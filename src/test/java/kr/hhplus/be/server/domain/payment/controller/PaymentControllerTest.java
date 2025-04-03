@@ -50,7 +50,7 @@ class PaymentControllerTest {
         void processPayment_success() throws Exception {
             ProcessPaymentRequest request = new ProcessPaymentRequest(1001L, 1L, new BigDecimal("1000"));
 
-            mockMvc.perform(post("/api/v1/payments/process")
+            mockMvc.perform(post("/api/v1/payments")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -69,7 +69,7 @@ class PaymentControllerTest {
         void confirmPayment_success() throws Exception {
             ProcessPaymentRequest request = new ProcessPaymentRequest(1002L, 2L, new BigDecimal("2000"));
 
-            String response = mockMvc.perform(post("/api/v1/payments/process")
+            String response = mockMvc.perform(post("/api/v1/payments")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -94,7 +94,7 @@ class PaymentControllerTest {
         void getPaymentStatus_success() throws Exception {
             ProcessPaymentRequest request = new ProcessPaymentRequest(1003L, 3L, new BigDecimal("3000"));
 
-            String response = mockMvc.perform(post("/api/v1/payments/process")
+            String response = mockMvc.perform(post("/api/v1/payments")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -118,7 +118,7 @@ class PaymentControllerTest {
         void getPaymentByOrderId_success() throws Exception {
             ProcessPaymentRequest request = new ProcessPaymentRequest(1004L, 4L, new BigDecimal("4000"));
 
-            String response = mockMvc.perform(post("/api/v1/payments/process")
+            String response = mockMvc.perform(post("/api/v1/payments")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())

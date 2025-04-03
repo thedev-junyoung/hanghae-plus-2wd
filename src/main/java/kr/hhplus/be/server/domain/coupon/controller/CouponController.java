@@ -37,4 +37,10 @@ public class CouponController implements CouponAPI {
         CouponListResponse response = couponService.getUserCoupons(userId, status);
         return ResponseEntity.ok(CustomApiResponse.success(response));
     }
+
+    @Override
+    public ResponseEntity<CustomApiResponse<CouponResponse>> issueLimitedCoupon(IssueCouponRequest request) {
+        CouponResponse response = couponService.limitedIssueCoupon(request);
+        return ResponseEntity.ok(CustomApiResponse.success(response));
+    }
 }

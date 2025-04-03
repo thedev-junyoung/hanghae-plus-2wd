@@ -20,4 +20,9 @@ public interface CouponService {
      * 사용자의 보유 쿠폰 목록을 조회합니다
      */
     CouponListResponse getUserCoupons(Long userId, String status);
+
+    /**
+     * 한정된 수량의 쿠폰을 발급합니다
+     */
+    CouponResponse limitedIssueCoupon(IssueCouponRequest request);
 }

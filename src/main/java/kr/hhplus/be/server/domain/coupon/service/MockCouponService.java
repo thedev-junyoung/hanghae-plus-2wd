@@ -107,6 +107,33 @@ public class MockCouponService implements CouponService {
                 .build();
     }
 
+    @Override
+    public CouponResponse limitedIssueCoupon(IssueCouponRequest request) {
+        validateUserId(request.getUserId());
+        validateCouponExists(request.getCouponCode());
+
+        // 쿠폰 정보 조회 및 검증
+        Map<String, Object> couponData = mockCouponDB.get(request.getCouponCode());
+        validateCouponAvailability(couponData);
+
+        // 쿠폰 수량 감소
+        decreaseCouponQuantity(couponData);
+
+        // 사용자에게 쿠폰 발급
+        CouponResponse coupon = createUserCoupon(
+                request.getUserId(), couponData
+        );
+
+        // 사용자의 쿠폰 목록에 추가
+        userCouponStore.computeIfAbsent(request.getUserId(), k -> new ArrayList<>()).add(coupon);
+
+        // 이벤트 로깅
+        logCouponEvent("LIMITED_ISSUE", request.getCouponCode());
+
+        return coupon;
+
+    }
+
     // ====== 헬퍼 메서드 ======
 
     private Map<String, Object> createCouponData(

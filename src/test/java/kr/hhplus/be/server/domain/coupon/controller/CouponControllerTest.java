@@ -47,7 +47,7 @@ class CouponControllerTest {
                     .build();
 
             // when & then
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
@@ -82,13 +82,13 @@ class CouponControllerTest {
 
             // when & then
             // 첫 번째 요청 (성공)
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request1)))
                     .andExpect(status().isOk());
 
             // 두 번째 요청 (실패)
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request2)))
                     .andDo(print())
@@ -111,7 +111,7 @@ class CouponControllerTest {
                     .build();
 
             // when & then
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
@@ -139,7 +139,7 @@ class CouponControllerTest {
                     .validUntil(LocalDateTime.now().plusDays(30))
                     .build();
 
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(createRequest)))
                     .andExpect(status().isOk());
@@ -203,7 +203,7 @@ class CouponControllerTest {
                     .validUntil(LocalDateTime.now().plusDays(30))
                     .build();
 
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(createRequest)))
                     .andExpect(status().isOk());
@@ -282,7 +282,7 @@ class CouponControllerTest {
                     .validUntil(LocalDateTime.now().plusDays(30))
                     .build();
 
-            mockMvc.perform(post("/api/v1/coupons/create")
+            mockMvc.perform(post("/api/v1/coupons")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(createRequest)))
                     .andExpect(status().isOk())

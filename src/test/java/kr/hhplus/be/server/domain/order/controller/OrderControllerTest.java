@@ -120,7 +120,7 @@ class OrderControllerTest {
 
             Long orderId = ((Number) JsonPath.read(response, "$.data.orderId")).longValue();
             // 취소 요청
-            mockMvc.perform(post("/api/v1/orders/{orderId}/cancel", orderId)
+            mockMvc.perform(delete("/api/v1/orders/{orderId}", orderId)
                             .param("userId", "2"))
                     .andDo(print())
                     .andExpect(status().isOk())
@@ -149,7 +149,7 @@ class OrderControllerTest {
 
 
             // when & then: 잘못된 사용자 ID로 취소 요청
-            mockMvc.perform(post("/api/v1/orders/{orderId}/cancel", orderId)
+            mockMvc.perform(delete("/api/v1/orders/{orderId}", orderId)
                             .param("userId", "9999"))
                     .andDo(print())
                     .andExpect(status().isForbidden())  // 비즈니스 예외 처리에서 403으로 매핑했을 경우
