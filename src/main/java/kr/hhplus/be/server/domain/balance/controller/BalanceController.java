@@ -8,9 +8,11 @@ import kr.hhplus.be.server.domain.balance.dto.response.BalanceResponse;
 import kr.hhplus.be.server.domain.balance.service.BalanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/api/v1/balances")
 @RequiredArgsConstructor
 public class BalanceController implements BalanceAPI {
 

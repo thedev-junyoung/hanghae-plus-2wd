@@ -13,7 +13,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderDto {
+public class OrderDTO {
 
     private Long orderId;
     private Long userId;
@@ -23,14 +23,14 @@ public class OrderDto {
     private BigDecimal totalAmount;
     private BigDecimal discountAmount;
     private BigDecimal finalAmount;
-    private AppliedCouponDto appliedCoupon;
+    private AppliedCouponDTO appliedCoupon;
     private BigDecimal remainingBalance;
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class AppliedCouponDto {
+    public static class AppliedCouponDTO {
         private Long userCouponId;
         private String couponType;
         private Integer discountRate;

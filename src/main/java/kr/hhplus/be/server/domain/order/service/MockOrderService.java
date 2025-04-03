@@ -21,7 +21,7 @@ public class MockOrderService implements OrderService {
     private final Map<Long, OrderResponse> orderStore = new ConcurrentHashMap<>();
 
     @Override
-    public OrderResponse createOrder(CreateOrderRequest request) {
+    public OrderResponse createOrder(CreateOrderRequest request) { // !! 고민 !!
         Long newOrderId = orderIdGenerator.getAndIncrement();
 
         List<OrderItemDTO> items = mapToItemDtos(request.getItems());

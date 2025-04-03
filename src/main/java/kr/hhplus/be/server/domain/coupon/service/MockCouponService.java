@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 public class MockCouponService implements CouponService {
@@ -19,45 +21,30 @@ public class MockCouponService implements CouponService {
     private final AtomicLong couponIdGenerator = new AtomicLong(1L);
     private final Map<Long, List<CouponResponse>> userCouponStore = new ConcurrentHashMap<>();
     private final Set<String> couponCodes = Collections.synchronizedSet(new HashSet<>());
-
-    // 원본 쿠폰 정보를 저장하기 위한 별도의 저장소 (Mock DB)
-    private final Map<String, Object> mockCouponDB = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Object>> mockCouponDB = new ConcurrentHashMap<>();
 
     @Override
     public CouponResponse createCoupon(CreateCouponRequest request) {
-        // 쿠폰 코드 중복 확인
-        if (couponCodes.contains(request.getCode())) {
-            throw new BusinessException(ErrorCode.COUPON_CODE_ALREADY_EXISTS);
-        }
-
-        // 유효기간 검증
-        if (request.getValidFrom().isAfter(request.getValidUntil())) {
-            throw new BusinessException(ErrorCode.INVALID_DATE_RANGE);
-        }
+        validateCouponCode(request.getCode());
+        validateDateRange(request.getValidFrom(), request.getValidUntil());
 
         // Mock 발급자 ID (실제 구현에서는 인증 정보에서 추출)
         Long issuerId = 1001L;
         Long couponId = couponIdGenerator.getAndIncrement();
 
-        // 실제로는 DB에 저장될 쿠폰 정보 (Mock)
-        Map<String, Object> couponData = new HashMap<>();
-        couponData.put("id", couponId);
-        couponData.put("issuerId", issuerId);
-        couponData.put("code", request.getCode());
-        couponData.put("type", request.getType());
-        couponData.put("discountRate", request.getDiscountRate());
-        couponData.put("totalQuantity", request.getTotalQuantity());
-        couponData.put("remainingQuantity", request.getTotalQuantity());
-        couponData.put("validFrom", request.getValidFrom());
-        couponData.put("validUntil", request.getValidUntil());
-        couponData.put("targetUserId", request.getTargetUserId());
-        couponData.put("createdAt", LocalDateTime.now());
+        // 쿠폰 데이터 생성 및 저장
+        Map<String, Object> couponData = createCouponData(
+                couponId, issuerId, request.getCode(), request.getType(),
+                request.getDiscountRate(), request.getTotalQuantity(),
+                request.getValidFrom(), request.getValidUntil(),
+                request.getTargetUserId()
+        );
 
         // Mock DB에 저장
         mockCouponDB.put(request.getCode(), couponData);
         couponCodes.add(request.getCode());
 
-        // 클라이언트에 반환할 응답 객체 (CouponResponse DTO 형식에 맞춤)
+        // 응답 객체 생성
         CouponResponse response = CouponResponse.builder()
                 .userCouponId(null) // 아직 사용자에게 발급되지 않음
                 .userId(null) // 아직 사용자에게 발급되지 않음
@@ -67,82 +54,146 @@ public class MockCouponService implements CouponService {
                 .expiryDate(request.getValidUntil())
                 .build();
 
-        // TODO: 트랜잭셔널 아웃박스 패턴 - 쿠폰 생성 이벤트를 COUPON_EVENTS 테이블에 저장
-        System.out.println("쿠폰 생성 이벤트 저장: 쿠폰 코드 " + request.getCode());
+        // 아웃박스 패턴 이벤트 로깅
+        logCouponEvent("CREATE", request.getCode());
 
         return response;
     }
 
     @Override
     public CouponResponse issueCoupon(IssueCouponRequest request) {
-        if (request.getUserId() < 1) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        validateUserId(request.getUserId());
+        validateCouponExists(request.getCouponCode());
 
-        // 쿠폰 코드 유효성 검증
-        String couponCode = request.getCouponCode();
-        if (!couponCodes.contains(couponCode)) {
-            throw new BusinessException(ErrorCode.COUPON_NOT_FOUND);
-        }
-
-        // Mock DB에서 쿠폰 정보 조회
-        Map<String, Object> couponData = (Map<String, Object>) mockCouponDB.get(couponCode);
-
-        // 남은 수량 확인
-        int remainingQuantity = (int) couponData.get("remainingQuantity");
-        if (remainingQuantity <= 0) {
-            throw new BusinessException(ErrorCode.COUPON_EXHAUSTED);
-        }
+        // 쿠폰 정보 조회 및 검증
+        Map<String, Object> couponData = mockCouponDB.get(request.getCouponCode());
+        validateCouponAvailability(couponData);
 
         // 쿠폰 수량 감소
-        couponData.put("remainingQuantity", remainingQuantity - 1);
-
-        // 유효기간 확인
-        LocalDateTime validUntil = (LocalDateTime) couponData.get("validUntil");
-        if (validUntil.isBefore(LocalDateTime.now())) {
-            throw new BusinessException(ErrorCode.COUPON_EXPIRED);
-        }
+        decreaseCouponQuantity(couponData);
 
         // 사용자에게 쿠폰 발급
-        CouponResponse coupon = CouponResponse.builder()
-                .userCouponId(couponIdGenerator.getAndIncrement())
-                .userId(request.getUserId())
-                .couponType((String) couponData.get("type"))
-                .discountRate((Integer) couponData.get("discountRate"))
-                .issuedAt(LocalDateTime.now())
-                .expiryDate(validUntil)
-                .build();
+        CouponResponse coupon = createUserCoupon(
+                request.getUserId(), couponData
+        );
 
+        // 사용자의 쿠폰 목록에 추가
         userCouponStore.computeIfAbsent(request.getUserId(), k -> new ArrayList<>()).add(coupon);
+
+        // 이벤트 로깅
+        logCouponEvent("ISSUE", request.getCouponCode());
 
         return coupon;
     }
 
     @Override
     public CouponListResponse getUserCoupons(Long userId, String status) {
-        if (userId < 1) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        validateUserExistsForQuery(userId);  // ✅ 여기서 존재 여부 확인
 
         List<CouponResponse> allCoupons = userCouponStore.getOrDefault(userId, Collections.emptyList());
 
-        // status에 따라 필터링
-        List<CouponResponse> filtered;
-        if ("UNUSED".equals(status)) {
-            filtered = allCoupons.stream()
-                    .filter(c -> c.getExpiryDate().isAfter(LocalDateTime.now()))
-                    .toList();
-        } else if ("EXPIRED".equals(status)) {
-            filtered = allCoupons.stream()
-                    .filter(c -> c.getExpiryDate().isBefore(LocalDateTime.now()))
-                    .toList();
-        } else {
-            // ALL 또는 기타 상태
-            filtered = new ArrayList<>(allCoupons);
-        }
+        Predicate<CouponResponse> predicate = switch (status) {
+            case "UNUSED" -> c -> c.getExpiryDate().isAfter(LocalDateTime.now());
+            case "EXPIRED" -> c -> c.getExpiryDate().isBefore(LocalDateTime.now());
+            default -> c -> true;
+        };
+
+        List<CouponResponse> filtered = allCoupons.stream()
+                .filter(predicate)
+                .collect(Collectors.toList());
 
         return CouponListResponse.builder()
                 .coupons(filtered)
                 .build();
+    }
+
+    // ====== 헬퍼 메서드 ======
+
+    private Map<String, Object> createCouponData(
+            Long couponId, Long issuerId, String code, String type,
+            Integer discountRate, Integer totalQuantity,
+            LocalDateTime validFrom, LocalDateTime validUntil,
+            Long targetUserId
+    ) {
+        Map<String, Object> couponData = new HashMap<>();
+        couponData.put("id", couponId);
+        couponData.put("issuerId", issuerId);
+        couponData.put("code", code);
+        couponData.put("type", type);
+        couponData.put("discountRate", discountRate);
+        couponData.put("totalQuantity", totalQuantity);
+        couponData.put("remainingQuantity", totalQuantity);
+        couponData.put("validFrom", validFrom);
+        couponData.put("validUntil", validUntil);
+        couponData.put("targetUserId", targetUserId);
+        couponData.put("createdAt", LocalDateTime.now());
+
+        return couponData;
+    }
+
+    private CouponResponse createUserCoupon(Long userId, Map<String, Object> couponData) {
+        return CouponResponse.builder()
+                .userCouponId(couponIdGenerator.getAndIncrement())
+                .userId(userId)
+                .couponType((String) couponData.get("type"))
+                .discountRate((Integer) couponData.get("discountRate"))
+                .issuedAt(LocalDateTime.now())
+                .expiryDate((LocalDateTime) couponData.get("validUntil"))
+                .build();
+    }
+
+    private void decreaseCouponQuantity(Map<String, Object> couponData) {
+        int remainingQuantity = (int) couponData.get("remainingQuantity");
+        couponData.put("remainingQuantity", remainingQuantity - 1);
+    }
+
+    private void logCouponEvent(String eventType, String couponCode) {
+        System.out.println("쿠폰 " + eventType + " 이벤트 저장: 쿠폰 코드 " + couponCode);
+    }
+
+    // ====== 검증 메서드 ======
+
+    private void validateCouponCode(String code) {
+        if (couponCodes.contains(code)) {
+            throw new BusinessException(ErrorCode.COUPON_CODE_ALREADY_EXISTS);
+        }
+    }
+
+    private void validateDateRange(LocalDateTime from, LocalDateTime until) {
+        if (from.isAfter(until)) {
+            throw new BusinessException(ErrorCode.INVALID_DATE_RANGE);
+        }
+    }
+
+    private void validateUserId(Long userId) {
+        if (userId == null || userId < 1) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+
+
+    private void validateCouponExists(String couponCode) {
+        if (!couponCodes.contains(couponCode)) {
+            throw new BusinessException(ErrorCode.COUPON_NOT_FOUND);
+        }
+    }
+
+    private void validateCouponAvailability(Map<String, Object> couponData) {
+        // 남은 수량 확인
+        int remainingQuantity = (int) couponData.get("remainingQuantity");
+        if (remainingQuantity <= 0) {
+            throw new BusinessException(ErrorCode.COUPON_EXHAUSTED);
+        }
+
+        // 유효기간 확인
+        LocalDateTime validUntil = (LocalDateTime) couponData.get("validUntil");
+        if (validUntil.isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.COUPON_EXPIRED);
+        }
+    }
+    private void validateUserExistsForQuery(Long userId) {
+        if (userId == null || userId < 1 || !userCouponStore.containsKey(userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
     }
 }

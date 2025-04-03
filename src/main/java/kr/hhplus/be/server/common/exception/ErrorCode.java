@@ -56,8 +56,7 @@ public enum ErrorCode {
     UNAUTHORIZED_ACCESS(HttpStatus.FORBIDDEN, "인증되지 않은 접근입니다."),
 
 
-
-
+    INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "유효하지 않은 파라미터입니다.")
 
     ;
 

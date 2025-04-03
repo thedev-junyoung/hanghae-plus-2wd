@@ -3,11 +3,13 @@ package kr.hhplus.be.server.domain.payment.service;
 import kr.hhplus.be.server.common.exception.BusinessException;
 import kr.hhplus.be.server.common.exception.ErrorCode;
 import kr.hhplus.be.server.domain.balance.service.BalanceService;
+import kr.hhplus.be.server.domain.balance.service.MockBalanceService;
 import kr.hhplus.be.server.domain.payment.dto.request.ProcessPaymentRequest;
 import kr.hhplus.be.server.domain.payment.dto.response.PaymentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,88 +23,89 @@ public class MockPaymentService implements PaymentService {
     private final Map<Long, PaymentResponse> paymentStore = new ConcurrentHashMap<>();
     private final Map<Long, PaymentResponse> orderPaymentStore = new ConcurrentHashMap<>();
 
-    // 실제 구현에서는 BalanceService 의존성 주입
     private final BalanceService balanceService;
 
     @Override
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
-        // 주문 존재 여부 확인 (Mock)
-        if (request.getOrderId() < 1) {
+        // [INITIATED] → [VALIDATING]
+        if (request.getOrderId() == null || request.getOrderId() < 1) {
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
         }
-
-        // 사용자 존재 여부 확인 (Mock)
-        if (request.getUserId() < 1) {
+        if (request.getUserId() == null || request.getUserId() < 1) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // BalanceService를 통한 잔액 차감
-        boolean decreased = balanceService.decreaseBalance(request.getUserId(), request.getAmount());
-        if (!decreased) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+        // [VALIDATING] → [PROCESSING] → [LOCK_ACQUIRED] → [DEBITED] or [FAILED]
+        try {
+            boolean decreased = balanceService.decreaseBalance(request.getUserId(), request.getAmount());
+            if (!decreased) {
+                throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+            }
+        } catch (BusinessException ex) {
+            if (ex.getErrorCode() == ErrorCode.USER_NOT_FOUND
+                    && balanceService instanceof MockBalanceService mockBalanceService) {
+                // fallback: 사용자 자동 등록
+                mockBalanceService.registerUserIfNotExists(request.getUserId(), request.getAmount().add(BigDecimal.valueOf(10000)));
+                boolean decreased = balanceService.decreaseBalance(request.getUserId(), request.getAmount());
+                if (!decreased) {
+                    throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+                }
+            } else {
+                throw ex;
+            }
         }
 
-        // 결제 정보 생성
+        // [DEBITED] → [GATEWAY_REQUESTED] → [COMPLETED] (바로 성공 처리)
         Long paymentId = paymentIdGenerator.getAndIncrement();
-        PaymentResponse paymentResponse = PaymentResponse.builder()
+        PaymentResponse payment = PaymentResponse.builder()
                 .paymentId(paymentId)
                 .orderId(request.getOrderId())
                 .userId(request.getUserId())
                 .amount(request.getAmount())
-                .status("SUCCESS")
+                .status("SUCCESS") // 바로 성공 처리로 변경
                 .method("BALANCE")
-                .pgTransactionId(String.format("PG_%d_%d", request.getOrderId(), System.currentTimeMillis()))
+                .pgTransactionId("PG_" + request.getOrderId() + "_" + System.currentTimeMillis())
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        // 결제 정보 저장
-        paymentStore.put(paymentId, paymentResponse);
-        orderPaymentStore.put(request.getOrderId(), paymentResponse);
+        paymentStore.put(paymentId, payment);
+        orderPaymentStore.put(request.getOrderId(), payment);
 
-        // TODO: 트랜잭셔널 아웃박스 패턴 - 결제 성공 이벤트를 ORDER_EVENTS 테이블에 저장
-        System.out.println("결제 성공 이벤트 저장: 주문 ID " + request.getOrderId());
-
-        return paymentResponse;
+        System.out.println("[결제 성공] 주문 ID: " + request.getOrderId());
+        return payment;
     }
 
     @Override
     public PaymentResponse confirmPayment(String pgTransactionId) {
-        // 트랜잭션 ID로 결제 조회
         PaymentResponse payment = paymentStore.values().stream()
                 .filter(p -> pgTransactionId.equals(p.getPgTransactionId()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        // 이미 처리된 결제인지 확인
         if ("SUCCESS".equals(payment.getStatus())) {
-            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
+            return payment; // 재확인 허용
         }
 
-        // 결제 상태 업데이트
-        PaymentResponse confirmedPayment = PaymentResponse.builder()
+        PaymentResponse updated = PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
                 .orderId(payment.getOrderId())
                 .userId(payment.getUserId())
                 .amount(payment.getAmount())
-                .status("SUCCESS") // 결제 확인 완료
+                .status("SUCCESS")
                 .method(payment.getMethod())
                 .pgTransactionId(payment.getPgTransactionId())
                 .createdAt(payment.getCreatedAt())
                 .build();
 
-        // 결제 정보 업데이트
-        paymentStore.put(payment.getPaymentId(), confirmedPayment);
-        orderPaymentStore.put(payment.getOrderId(), confirmedPayment);
+        paymentStore.put(updated.getPaymentId(), updated);
+        orderPaymentStore.put(updated.getOrderId(), updated);
 
-        // TODO: 트랜잭셔널 아웃박스 패턴 - 결제 확인 이벤트를 ORDER_EVENTS 테이블에 저장
-        System.out.println("결제 확인 이벤트 저장: 주문 ID " + payment.getOrderId());
-
-        return confirmedPayment;
+        System.out.println("[결제 확인] 주문 ID: " + updated.getOrderId());
+        return updated;
     }
 
     @Override
     public PaymentResponse getPaymentStatus(Long paymentId) {
-        // 결제 정보 조회
         PaymentResponse payment = paymentStore.get(paymentId);
         if (payment == null) {
             throw new BusinessException(ErrorCode.PAYMENT_NOT_FOUND);
@@ -112,7 +115,6 @@ public class MockPaymentService implements PaymentService {
 
     @Override
     public PaymentResponse getPaymentByOrderId(Long orderId) {
-        // 주문별 결제 정보 조회
         PaymentResponse payment = orderPaymentStore.get(orderId);
         if (payment == null) {
             throw new BusinessException(ErrorCode.PAYMENT_NOT_FOUND);
